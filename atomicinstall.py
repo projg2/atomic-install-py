@@ -23,6 +23,17 @@ class FileType:
 		else:
 			return None
 
+class FileRec:
+	def __init__(self, rf, f, d, stt, dstt, st = None, dst = None, ddp = None):
+		self.name = rf
+		self.f = f
+		self.d = d
+		self.ftype = stt
+		self.dtype = dstt
+		self.fstat = st
+		self.dstat = dst
+		self.dparentpath = ddp
+
 class AtomicInstall:
 	mergingprefix = '.MERGING-'
 	strayprefix = '.STRAY-'
@@ -46,7 +57,7 @@ class AtomicInstall:
 
 		imagelen = len(self.image)
 		for (fp, dirs, files) in os.walk(self.image):
-			p = fp[imagelen:]
+			p = fp[imagelen:].lstrip('/')
 			dp = os.path.join(self.root, p)
 			for fn in dirs + files:
 				rf = os.path.join(p, fn)
@@ -83,8 +94,9 @@ class AtomicInstall:
 					if self.allowedcollision and rf not in self.allowedcollision:
 						out['collision'].append(rf)
 						continue
+					ddp = None
 
-				fl.append((rf, f, d, stt, dstt, st, dst))
+				fl.append(FileRec(rf, f, d, stt, dstt, st, dst, ddp))
 
 		for k,v in out.items():
 			if v:
@@ -104,21 +116,38 @@ class AtomicInstall:
 
 		outfl = []
 		moves = []
-		for rf, f, d, stt, dstt, st, dst in fl:
-			if st.st_dev != dst.st_dev:
-				raise Exception('XXX: copy the file')
-			if dstt and dstt != stt: # need to get rid of stray file
-				(dir, fn) = os.path.split(rf)
-				sname = os.path.join(dir, self.strayprefix + fn)
-				ssrc = os.path.join(self.root, rf)
-				sdst = os.path.join(self.root, sname)
-				outfl.append((sname, ssrc, sdst, dstt, None, dst, None))
-				moves.append((rf, sname))
+		dirignore = []
+
+		for f in sorted(fl, key=lambda x: x.name):
+			for di in dirignore:
+				# was the directory 'moved' already?
+				if f.name.startswith(di):
+					if progresscb:
+						progresscb(('install', f.name))
+					break
+			else:
+				if f.fstat.st_dev != f.dstat.st_dev:
+					raise Exception('XXX: copy the file')
+				if f.dtype and f.dtype != f.ftype: # need to get rid of stray file
+					(dir, fn) = os.path.split(f.name)
+					sname = os.path.join(dir, self.strayprefix + fn)
+					ssrc = os.path.join(self.root, f.name)
+					sdst = os.path.join(self.root, sname)
+					outfl.append(FileRec(sname, ssrc, sdst, f.dtype, None, f.dstat))
+					moves.append((f.name, sname))
+					if progresscb:
+						progresscb(('move', f.name, sname))
+				if f.ftype == FileType.dir:
+					# directories need to be treated specially
+					# if they exist, we ignore the dir itself and just move the files
+					# if they do not, we move the whole dir and ignore the files
+					if not f.dtype:
+						dirignore.append(os.path.join(f.name, ''))
+						outfl.append(f)
+				else:
+					outfl.append(f)
 				if progresscb:
-					progresscb(('move', rf, sname))
-			outfl.append((rf, f, d, stt, dstt, st, dst))
-			if progresscb:
-				progresscb(('install', rf))
+					progresscb(('install', f.name))
 
 		self.filelist = outfl
 		self.moves = moves
@@ -135,8 +164,8 @@ class AtomicInstall:
 		except AttributeError:
 			raise InvalidCallOrder('check() and prepare() need to be called before merge().')
 
-		for rf, f, d, stt, dstt, st, dst in fl:
-			os.rename(f, d)
+		for f in fl:
+			os.rename(f.f, f.d)
 
 		return self.moves
 

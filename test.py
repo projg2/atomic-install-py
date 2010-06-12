@@ -14,9 +14,9 @@ def printfl(fl):
 
 def printcb(fle):
 	if fle[0] == 'move':
-		print '>>> %s <- %s' % (fle[2], fle[1])
+		print '>>> /%s <= /%s' % (fle[2], fle[1])
 	elif fle[0] == 'install':
-		print '>>> %s' % fle[1]
+		print '>>> /%s' % fle[1]
 
 # P: engage the lock here
 a.check()
