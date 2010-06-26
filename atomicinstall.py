@@ -2,7 +2,7 @@
 # (C) 2010 Michał Górny <gentoo@mgorny.alt.pl>
 # Released under the terms of the 3-clause BSD license.
 
-import os, stat
+import os, shutil, stat
 
 class FilesystemChanged(Exception):
 	pass
@@ -126,8 +126,7 @@ class AtomicInstall:
 						progresscb(('install', f.name))
 					break
 			else:
-				if f.fstat.st_dev != f.dstat.st_dev:
-					raise Exception('XXX: copy the file')
+				# stray file handling
 				if f.dtype and f.dtype != f.ftype: # need to get rid of stray file
 					(dir, fn) = os.path.split(f.name)
 					sname = os.path.join(dir, self.strayprefix + fn)
@@ -137,6 +136,7 @@ class AtomicInstall:
 					moves.append((f.name, sname))
 					if progresscb:
 						progresscb(('move', f.name, sname))
+				# atomic directory move support
 				if f.ftype == FileType.dir:
 					# directories need to be treated specially
 					# if they exist, we ignore the dir itself and just move the files
@@ -144,7 +144,23 @@ class AtomicInstall:
 					if not f.dtype:
 						dirignore.append(os.path.join(f.name, ''))
 						outfl.append(f)
+						# cross-device moving of directories
+						if f.fstat.st_dev != f.dstat.st_dev:
+							raise Exception('XXX: copy directory')
 				else:
+					# cross-device moving of non-directories
+					if f.fstat.st_dev != f.dstat.st_dev:
+						(dir, fn) = os.path.split(f.name)
+						mname = os.path.join(dir, self.mergingprefix + fn)
+						mpath = os.path.join(self.root, mname)
+
+						if f.ftype == FileType.file:
+							# we assume .MERGING* is ours and can remove it
+							if os.path.exists(mpath):
+								shutil.rmtree(mpath)
+							shutil.copy2(f.f, mpath)
+
+						f.f = mpath
 					outfl.append(f)
 				if progresscb:
 					progresscb(('install', f.name))
