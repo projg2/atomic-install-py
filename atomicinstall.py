@@ -168,19 +168,19 @@ class AtomicInstall:
 		dirignore = []
 
 		for f in sorted(fl, key=lambda x: x.name):
+			# report the filename before actual copying
+			if progresscb:
+				if f.ftype == FileType.link:
+					progresscb(('link', f.name, os.readlink(f.f)))
+				else:
+					progresscb(('install', f.name))
+
 			for di in dirignore:
 				# was the directory 'moved' already?
 				if f.name.startswith(di):
-					if progresscb:
-						if f.ftype == FileType.link:
-							progresscb(('link', f.name, os.readlink(f.f)))
-						else:
-							progresscb(('install', f.name))
-					# cross-device copying is necessary with atomically 'moved' dirs too
-					if f.fstat.st_dev != f.dstat.st_dev:
-						self._copy(f, di)
 					break
 			else:
+				di = None
 				# stray file handling
 				if f.dtype and f.dtype != f.ftype: # need to get rid of stray file
 					(dir, fn) = os.path.split(f.name)
@@ -191,22 +191,18 @@ class AtomicInstall:
 					moves.append((f.name, sname))
 					if progresscb:
 						progresscb(('move', f.name, sname))
-				# report the filename before copying it
-				if progresscb:
-					if f.ftype == FileType.link:
-						progresscb(('link', f.name, os.readlink(f.f)))
-					else:
-						progresscb(('install', f.name))
 				# directories need to be treated specially
 				# if they exist, we ignore the dir itself and just move the files
 				# if they do not, we move the whole dir and ignore the files
 				if f.ftype == FileType.dir and not f.dtype:
 					dirignore.append(os.path.join(f.name, ''))
 				if f.ftype != FileType.dir or not f.dtype:
-					# cross-device moving
-					if f.fstat.st_dev != f.dstat.st_dev:
-						self._copy(f)
 					outfl.append(f)
+
+			if f.ftype != FileType.dir or not f.dtype:
+				# cross-device moving
+				if f.fstat.st_dev != f.dstat.st_dev:
+					self._copy(f, di)
 
 		self.filelist = outfl
 		self.moves = moves
