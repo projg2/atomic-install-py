@@ -171,6 +171,8 @@ class AtomicInstall:
 							shutil.copy2(f.f, mpath)
 						elif f.ftype == FileType.dir:
 							shutil.copytree(f.f, mpath, symlinks=True)
+						elif f.ftype == FileType.link:
+							os.symlink(os.readlink(f.f), mpath)
 						f.f = mpath
 					outfl.append(f)
 
