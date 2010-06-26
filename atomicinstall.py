@@ -140,14 +140,20 @@ class AtomicInstall:
 		if os.path.exists(mpath):
 			shutil.rmtree(mpath)
 
-		if f.ftype == FileType.file:
-			shutil.copyfile(f.f, mpath)
-		elif f.ftype == FileType.dir:
+		# directories can not be hardlinked so check for them first
+		if f.ftype == FileType.dir:
 			os.mkdir(mpath)
+		# if it's second or further link to a file, just hardlink
+		elif f in self.revlink[f.fstat.st_ino] and f != self.revlink[f.fstat.st_ino][0]:
+			os.link(self.revlink[f.fstat.st_ino][0].f, mpath)
+		# otherwise, do the appropriate copying
+		elif f.ftype == FileType.file:
+			shutil.copyfile(f.f, mpath)
 		elif f.ftype == FileType.link:
 			os.symlink(os.readlink(f.f), mpath)
 		else:
 			raise Exception('XXX')
+
 		# XXX: copystat() for symlinks?
 		if f.ftype != FileType.link:
 			shutil.copystat(f.f, mpath)
