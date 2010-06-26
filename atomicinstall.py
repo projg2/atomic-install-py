@@ -154,7 +154,7 @@ class AtomicInstall:
 					dirignore.append(os.path.join(f.name, ''))
 				if f.ftype != FileType.dir or not f.dtype:
 					# cross-device moving
-					if f.fstat.st_dev == f.dstat.st_dev:
+					if f.fstat.st_dev != f.dstat.st_dev:
 						(dir, fn) = os.path.split(f.name)
 						mname = os.path.join(dir, self.mergingprefix + fn)
 						mpath = os.path.join(self.root, mname)
