@@ -15,6 +15,9 @@ testenv: clean
 	echo test > $(TESTDIR)/stranger
 	ln $(TESTDIR)/stranger $(SRC)/itzatrap
 	ln $(SRC)/itzatrap $(SRC)/hardtest
+	mkfifo $(SRC)/fifotest
+	-mknod $(SRC)/cdrom b 11 0
+	-mknod $(SRC)/null c 1 3
 
 clean:
 	rm -rf $(TESTDIR)

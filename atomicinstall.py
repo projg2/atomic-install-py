@@ -13,6 +13,10 @@ class FileType:
 	file = 1
 	dir = 2
 	link = 3
+	fifo = 4
+	sock = 5
+	blk = 6
+	chr = 7
 
 	@classmethod
 	def from_stat(cls, st):
@@ -23,6 +27,14 @@ class FileType:
 			return cls.dir
 		elif stat.S_ISLNK(stm):
 			return cls.link
+		elif stat.S_ISFIFO(stm):
+			return cls.fifo
+		elif stat.S_ISSOCK(stm):
+			return cls.sock
+		elif stat.S_ISBLK(stm):
+			return cls.blk
+		elif stat.S_ISCHR(stm):
+			return cls.chr
 		else:
 			return None
 
@@ -78,6 +90,9 @@ class AtomicInstall:
 				stt = FileType.from_stat(st)
 				if not stt:
 					out['notsupported'].append(rf)
+					continue
+				# ignore UNIX sockets, they're useless when not bound to a server
+				elif stt == FileType.sock:
 					continue
 
 				d = os.path.join(dp, fn)
@@ -151,6 +166,12 @@ class AtomicInstall:
 			shutil.copyfile(f.f, mpath)
 		elif f.ftype == FileType.link:
 			os.symlink(os.readlink(f.f), mpath)
+		elif f.ftype == FileType.fifo:
+			os.mkfifo(mpath)
+		elif f.ftype == FileType.blk:
+			os.mknod(mpath, stat.S_IFBLK, f.fstat.st_rdev)
+		elif f.ftype == FileType.chr:
+			os.mknod(mpath, stat.S_IFCHR, f.fstat.st_rdev)
 		else:
 			raise Exception('XXX')
 
