@@ -257,11 +257,35 @@ class AtomicInstall:
 
 		pass
 
-	def rollback(self, list):
+	def rollback(self, fl):
 		""" Rollback changes performed by prepare() if merge() hasn't started
 		yet, using the saved filelist. """
 
-		pass
+		mergingdirs = []
+		dirclean = []
+
+		for f in sorted(fl, key=lambda x: x.name):
+			for di in mergingdirs:
+				# was the directory 'moved' already?
+				if f.name.startswith(di):
+					break
+			else:
+				di = None
+
+			(dir, fn) = os.path.split(di[:-1] if di else f.name)
+			mname = os.path.join(dir, self.mergingprefix + fn)
+			mpath = os.path.join(self.root, mname)
+			if di:
+				mpath = os.path.join(mpath, f.name[len(di):])
+
+			if os.path.isdir(mpath):
+				if di is None:
+					mergingdirs.append(os.path.join(f.name, ''))
+				dirclean.append(mpath)
+			elif os.path.lexists(mpath):
+				os.unlink(mpath)
+		for d in reversed(dirclean):
+			os.rmdir(d)
 
 	def replay(self, list):
 		""" Replay the merge() using the saved filelist. """
