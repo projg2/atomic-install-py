@@ -116,6 +116,34 @@ class AtomicInstall:
 		self.filelist = fl
 		return (out,fl)
 
+	def _copy(self, f, mergingdir = None):
+		""" Similar to shutil.copy2() but is supposed to support all our
+		file types. """
+
+		(dir, fn) = os.path.split(mergingdir[:-1] if mergingdir else f.name)
+		mname = os.path.join(dir, self.mergingprefix + fn)
+		mpath = os.path.join(self.root, mname)
+		if mergingdir:
+			mpath = os.path.join(mpath, f.name[len(mergingdir):])
+
+		# we assume .MERGING* is our domain and can remove anything inside
+		if os.path.exists(mpath):
+			shutil.rmtree(mpath)
+
+		if f.ftype == FileType.file:
+			shutil.copyfile(f.f, mpath)
+		elif f.ftype == FileType.dir:
+			os.mkdir(mpath)
+		elif f.ftype == FileType.link:
+			os.symlink(os.readlink(f.f), mpath)
+		else:
+			raise Exception('XXX')
+		# XXX: copystat() for symlinks?
+		if f.ftype != FileType.link:
+			shutil.copystat(f.f, mpath)
+
+		f.f = mpath
+
 	def prepare(self, progresscb = None):
 		""" Prepare all the files for the atomic rename. Copy them to the target
 		filesystem if necessary. Update the movelist. """
@@ -134,7 +162,13 @@ class AtomicInstall:
 				# was the directory 'moved' already?
 				if f.name.startswith(di):
 					if progresscb:
-						progresscb(('install', f.name))
+						if f.ftype == FileType.link:
+							progresscb(('link', f.name, os.readlink(f.f)))
+						else:
+							progresscb(('install', f.name))
+					# cross-device copying is necessary with atomically 'moved' dirs too
+					if f.fstat.st_dev != f.dstat.st_dev:
+						self._copy(f, di)
 					break
 			else:
 				# stray file handling
@@ -161,19 +195,7 @@ class AtomicInstall:
 				if f.ftype != FileType.dir or not f.dtype:
 					# cross-device moving
 					if f.fstat.st_dev != f.dstat.st_dev:
-						(dir, fn) = os.path.split(f.name)
-						mname = os.path.join(dir, self.mergingprefix + fn)
-						mpath = os.path.join(self.root, mname)
-						# we assume .MERGING* is ours and can remove it
-						if os.path.exists(mpath):
-							shutil.rmtree(mpath)
-						if f.ftype == FileType.file:
-							shutil.copy2(f.f, mpath)
-						elif f.ftype == FileType.dir:
-							shutil.copytree(f.f, mpath, symlinks=True)
-						elif f.ftype == FileType.link:
-							os.symlink(os.readlink(f.f), mpath)
-						f.f = mpath
+						self._copy(f)
 					outfl.append(f)
 
 		self.filelist = outfl
