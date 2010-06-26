@@ -51,7 +51,8 @@ class AtomicInstall:
 			'notsupported': [],
 			'notsupportedreplace': [],
 			'collision': [],
-			'unacceptable': []
+			'unacceptable': [],
+			'leftoverstray': []
 		}
 		fl = []
 
@@ -94,6 +95,13 @@ class AtomicInstall:
 					if self.allowedcollision and rf not in self.allowedcollision:
 						out['collision'].append(rf)
 						continue
+					elif stt != dstt:
+						# check for leftover moved stray files
+						(dir, fn) = os.path.split(d)
+						sname = os.path.join(dir, self.strayprefix + fn)
+						if os.path.exists(sname):
+							out['leftoverstray'].append(rf)
+							continue
 					ddp = None
 
 				fl.append(FileRec(rf, f, d, stt, dstt, st, dst, ddp))
