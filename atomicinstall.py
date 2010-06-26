@@ -200,8 +200,9 @@ class AtomicInstall:
 					outfl.append(f)
 
 			if f.ftype != FileType.dir or not f.dtype:
-				# cross-device moving
-				if f.fstat.st_dev != f.dstat.st_dev:
+				# we _need_ to copy the file if we're either merging cross-device
+				# or it is hardlinked to files outside of our image
+				if f.fstat.st_dev != f.dstat.st_dev or (f.ftype != FileType.dir and len(self.revlink[f.fstat.st_ino]) != f.fstat.st_nlink):
 					self._copy(f, di)
 
 		self.filelist = outfl

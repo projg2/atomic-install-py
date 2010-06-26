@@ -12,6 +12,8 @@ testenv: clean
 	echo 150 > $(SRC)/c/a/11
 	echo 150 > $(SRC)/c/b/11
 	ln $(SRC)/a $(SRC)/c/z
+	echo test > $(TESTDIR)/stranger
+	ln $(TESTDIR)/stranger $(SRC)/itzatrap
 
 clean:
 	rm -rf $(TESTDIR)
