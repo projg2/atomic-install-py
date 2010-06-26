@@ -13,10 +13,12 @@ def printfl(fl):
 		print '%s: %s -> %s' % (rf, f, d)
 
 def printcb(fle):
-	if fle[0] == 'move':
-		print '>>> /%s <= /%s' % (fle[2], fle[1])
-	elif fle[0] == 'install':
+	if fle[0] == 'install':
 		print '>>> /%s' % fle[1]
+	elif fle[0] == 'link':
+		print '>>> /%s -> %s' % (fle[1], fle[2])
+	elif fle[0] == 'move':
+		print '>>> /%s <= /%s' % (fle[2], fle[1])
 
 # P: engage the lock here
 print 'check()'

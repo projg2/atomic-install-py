@@ -12,6 +12,7 @@ class InvalidCallOrder(Exception):
 class FileType:
 	file = 1
 	dir = 2
+	link = 3
 
 	@classmethod
 	def from_stat(cls, st):
@@ -20,6 +21,8 @@ class FileType:
 			return cls.file
 		elif stat.S_ISDIR(stm):
 			return cls.dir
+		elif stat.S_ISLNK(stm):
+			return cls.link
 		else:
 			return None
 
@@ -146,7 +149,10 @@ class AtomicInstall:
 						progresscb(('move', f.name, sname))
 				# report the filename before copying it
 				if progresscb:
-					progresscb(('install', f.name))
+					if f.ftype == FileType.link:
+						progresscb(('link', f.name, os.readlink(f.f)))
+					else:
+						progresscb(('install', f.name))
 				# directories need to be treated specially
 				# if they exist, we ignore the dir itself and just move the files
 				# if they do not, we move the whole dir and ignore the files
