@@ -11,6 +11,7 @@ testenv: clean
 	mkdir $(DST)/a
 	echo 150 > $(SRC)/c/a/11
 	echo 150 > $(SRC)/c/b/11
+	ln $(SRC)/a $(SRC)/c/z
 
 clean:
 	rm -rf $(TESTDIR)

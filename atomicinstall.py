@@ -58,6 +58,7 @@ class AtomicInstall:
 			'leftoverstray': []
 		}
 		fl = []
+		revlink = {}
 
 		imagelen = len(self.image)
 		for (fp, dirs, files) in os.walk(self.image):
@@ -107,12 +108,21 @@ class AtomicInstall:
 							continue
 					ddp = None
 
-				fl.append(FileRec(rf, f, d, stt, dstt, st, dst, ddp))
+				fr = FileRec(rf, f, d, stt, dstt, st, dst, ddp)
+				# set up reverse inode mapping (hardlink) table
+				if stt != FileType.dir:
+					sino = st.st_ino
+					if sino not in revlink:
+						revlink[sino] = []
+					revlink[sino].append(fr)
+
+				fl.append(fr)
 
 		for k,v in out.items():
 			if v:
 				return (out,fl)
-		
+
+		self.revlink = revlink
 		self.filelist = fl
 		return (out,fl)
 
