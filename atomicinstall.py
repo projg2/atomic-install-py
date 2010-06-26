@@ -136,34 +136,29 @@ class AtomicInstall:
 					moves.append((f.name, sname))
 					if progresscb:
 						progresscb(('move', f.name, sname))
-				# atomic directory move support
-				if f.ftype == FileType.dir:
-					# directories need to be treated specially
-					# if they exist, we ignore the dir itself and just move the files
-					# if they do not, we move the whole dir and ignore the files
-					if not f.dtype:
-						dirignore.append(os.path.join(f.name, ''))
-						outfl.append(f)
-						# cross-device moving of directories
-						if f.fstat.st_dev != f.dstat.st_dev:
-							raise Exception('XXX: copy directory')
-				else:
-					# cross-device moving of non-directories
-					if f.fstat.st_dev != f.dstat.st_dev:
+				# report the filename before copying it
+				if progresscb:
+					progresscb(('install', f.name))
+				# directories need to be treated specially
+				# if they exist, we ignore the dir itself and just move the files
+				# if they do not, we move the whole dir and ignore the files
+				if f.ftype == FileType.dir and not f.dtype:
+					dirignore.append(os.path.join(f.name, ''))
+				if f.ftype != FileType.dir or not f.dtype:
+					# cross-device moving
+					if f.fstat.st_dev == f.dstat.st_dev:
 						(dir, fn) = os.path.split(f.name)
 						mname = os.path.join(dir, self.mergingprefix + fn)
 						mpath = os.path.join(self.root, mname)
-
+						# we assume .MERGING* is ours and can remove it
+						if os.path.exists(mpath):
+							shutil.rmtree(mpath)
 						if f.ftype == FileType.file:
-							# we assume .MERGING* is ours and can remove it
-							if os.path.exists(mpath):
-								shutil.rmtree(mpath)
 							shutil.copy2(f.f, mpath)
-
+						elif f.ftype == FileType.dir:
+							shutil.copytree(f.f, mpath, symlinks=True)
 						f.f = mpath
 					outfl.append(f)
-				if progresscb:
-					progresscb(('install', f.name))
 
 		self.filelist = outfl
 		self.moves = moves
