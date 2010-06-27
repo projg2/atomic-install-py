@@ -11,5 +11,6 @@ setup(
 	description = 'Atomically install an image of files onto the live filesystem',
 	author = 'Michał Górny',
 	packages = ['atomicinstall'],
+	package_dir = {'atomicinstall': 'lib'},
 	license = 'BSD'
 )
