@@ -1,0 +1,66 @@
+#!/usr/bin/python
+#	vim:fileencoding=utf-8
+# (C) 2010 Michał Górny <gentoo@mgorny.alt.pl>
+# Released under the terms of the 3-clause BSD license.
+
+PV = '0.1'
+
+import sys
+from optparse import OptionParser
+from atomicinstall import AtomicInstall
+
+def print_errors(out, dirs):
+	desc = {
+		'notsupported': 'File is of unsupported type',
+		'collision': 'File would clobber an existing file',
+		'unacceptable': 'File is using reserved prefix',
+		'leftoverstray': 'Leftover stray file found, it needs to be removed manually first'
+	}
+	filedesc = {
+		'notsupported': '\t%(image)s%(fn)s',
+		'collision': '\t%(image)s%(fn)s vs %(root)s%(fn)s',
+		'unacceptable': '\t%(image)s%(fn)s',
+		'leftoverstray': '\t%(root)s%(fn)s'
+	}
+
+	print('Install aborted due to the following problems:\n')
+	for (k,l) in out.items():
+		if l:
+			print('%s:' % desc[k])
+			for p in l:
+				dirs['fn'] = p
+				print(filedesc[k] % dirs)
+
+def main(argv):
+	opt = OptionParser(
+			usage='%prog [options] <image> <destination>',
+			version='%%prog %s' % PV,
+			description='Atomically install (move) files from the image tree to the destination, live filesystem.'
+	)
+	(opts, args) = opt.parse_args(argv[1:])
+
+	if len(args) != 2:
+		opt.print_help()
+		return 1
+
+	ai = AtomicInstall(*args)
+
+	out, fl = ai.check()
+
+	if out is not None:
+		print_errors(out, {'image': args[0], 'root': args[1]})
+		return 1
+
+	try:
+		ai.prepare()
+	except Exception:
+		ai.rollback()
+		raise
+
+	ai.merge()
+	ai.cleanup()
+
+	return 0
+
+if __name__ == '__main__':
+	sys.exit(main(sys.argv))

@@ -12,5 +12,6 @@ setup(
 	author = 'Michał Górny',
 	packages = ['atomicinstall'],
 	package_dir = {'atomicinstall': 'lib'},
+	scripts = ['atomicinstall'],
 	license = 'BSD'
 )
