@@ -64,7 +64,6 @@ class AtomicInstall:
 
 		out = {
 			'notsupported': [],
-			'notsupportedreplace': [],
 			'collision': [],
 			'unacceptable': [],
 			'leftoverstray': []
@@ -116,10 +115,11 @@ class AtomicInstall:
 						continue
 					elif stt != dstt:
 						# check for leftover moved stray files
-						(dir, fn) = os.path.split(d)
+						(dir, fn) = os.path.split(rf)
 						sname = os.path.join(dir, self.strayprefix + fn)
-						if os.path.exists(sname):
-							out['leftoverstray'].append(rf)
+						spath = os.path.join(self.root, sname)
+						if os.path.exists(spath):
+							out['leftoverstray'].append(sname)
 							continue
 					ddp = None
 
@@ -139,7 +139,7 @@ class AtomicInstall:
 
 		self.revlink = revlink
 		self.filelist = fl
-		return (out,fl)
+		return (None,fl)
 
 	def _copy(self, f, mergingdir = None):
 		""" Similar to shutil.copy2() but is supposed to support all our
