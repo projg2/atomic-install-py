@@ -257,12 +257,18 @@ class AtomicInstall:
 
 		pass
 
-	def rollback(self, fl):
+	def rollback(self, fl = None):
 		""" Rollback changes performed by prepare() if merge() hasn't started
 		yet, using the saved filelist. """
 
 		mergingdirs = []
 		dirclean = []
+
+		if fl is None:
+			try:
+				fl = self.filelist
+			except AttributeError:
+				raise InvalidCallOrder('rollback() needs to be called after prepare() or saved filelist needs to be provided.')
 
 		for f in sorted(fl, key=lambda x: x.name):
 			for di in mergingdirs:
